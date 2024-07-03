@@ -29,5 +29,20 @@ p.set_yscale('log')
 p.set_xscale('log')
 
 tt_datasets = tt_datasets.with_columns(
-    pl.concat_str('year','week',separator='-').alias('year_week')
+    pl.concat_str('year','week',separator='-').alias('year_week') + '-2'
 )
+
+tt_datasets = tt_datasets.with_columns(
+    pl.col('year_week').str.strptime(pl.Date,"%Y-%W-%w",strict = False).alias('date')
+)
+tt_datasets = tt_datasets.with_columns(
+    pl.col('date').str.to_date('%Y-%m-%d').alias('date_date')
+)
+
+p = sns.lineplot(
+    data = tt_datasets,
+    x = 'date',
+    y = 'observations',
+    color = 'blue'
+)
+p.set_yscale('log')
