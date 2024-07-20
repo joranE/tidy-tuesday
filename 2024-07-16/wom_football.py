@@ -49,3 +49,23 @@ ewf_standings = pl.read_parquet('2024-07-16/ewf_standings.parquet')
   + p9.geom_point()
   + p9.scale_y_log10()
 )
+
+# Attendance by team & season?
+team_attendance = ewf_appearances.group_by(
+  pl.col('team_id'),pl.col('team_name'),pl.col('season')
+).agg(
+  (pl.col('attendance').sum() / pl.col('match_id').n_unique()).alias('per_match')
+).sort(
+  pl.col('per_match'),descending=True
+).with_columns(
+  pl.col('season').str.slice(0,4).cast(pl.Int32).alias('year_int')
+)
+
+(
+  p9.ggplot(
+    data = team_attendance,
+    mapping = p9.aes(x = 'year_int',y = 'per_match + 1',group = 'team_name')
+  ) 
+  + p9.geom_line()
+  + p9.scale_y_log10()
+)
