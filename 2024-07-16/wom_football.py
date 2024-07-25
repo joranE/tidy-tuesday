@@ -58,13 +58,16 @@ team_attendance = ewf_appearances.group_by(
 ).sort(
   pl.col('per_match'),descending=True
 ).with_columns(
-  pl.col('season').str.slice(0,4).cast(pl.Int32).alias('year_int')
+  pl.col('season').str.slice(0,4).cast(pl.Int32).alias('year_int'),
+  pl.when(
+    pl.col('per_match') == 0
+  ).then(None).otherwise(pl.col('per_match')).alias('per_match')
 )
 
 (
   p9.ggplot(
     data = team_attendance,
-    mapping = p9.aes(x = 'year_int',y = 'per_match + 1',group = 'team_name')
+    mapping = p9.aes(x = 'year_int',y = 'per_match',group = 'team_name')
   ) 
   + p9.geom_line()
   + p9.scale_y_log10()
