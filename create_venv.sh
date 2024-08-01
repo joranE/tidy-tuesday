@@ -10,7 +10,7 @@ source env/bin/activate
 pip install --upgrade pip
 
 # Install the required packages
-pip install numpy pandas matplotlib seaborn polars pyarrow sklearn sktime ipykernel
+pip install numpy pandas matplotlib seaborn polars pyarrow scikit-learn sktime ipykernel plotnine
 
 # Deactivate the virtual environment
 deactivate
