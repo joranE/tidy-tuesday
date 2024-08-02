@@ -19,6 +19,7 @@ p9.theme_set(p9.theme_bw())
 summer_movie_genres = pl.read_parquet(
   source = '2024-07-30/summer_movie_genres.parquet'
 )
+
 summer_movies = pl.read_parquet(
   source = '2024-07-30/summer_movies.parquet'
 ).with_columns(
@@ -34,20 +35,47 @@ summer_movies.group_by(
   pl.col('average_rating').mean().alias('avg_rating')
 ).sort(by = 'year')
 
-genre_ratings = summer_movies.join(
-  summer_movie_genres,
-  on = 'tconst'
+summer_movie_explode = summer_movies.with_columns(
+  pl.col('genres').str.split(',').alias('genres_list')
+).explode(columns='genres_list')
+
+genre_runtimes = summer_movie_explode.group_by(
+  pl.col('genres_list')
+).agg(
+  pl.col('tconst').n_unique().alias('n_movies'),
+  pl.col('runtime_minutes').median().alias('med_runtime'),
+  pl.col('runtime_minutes').quantile(0.75).alias('q75'),
+  pl.col('runtime_minutes').quantile(0.25).alias('q25')
+).filter(
+  pl.col('genres_list') != 'nan'
+).sort(
+  'med_runtime',
+  descending=False
+).with_columns(
+  pl.col('genres_list').cast(pl.Categorical('physical'))
 )
 
 (
   p9.ggplot(
-    data = genre_ratings,
+    data = genre_runtimes,
+    mapping = p9.aes(y = 'med_runtime',x = 'genres_list')
+  ) 
+  + p9.geom_pointrange(
+    mapping = p9.aes(ymin = 'q25',ymax = 'q75')
+  ) 
+  + p9.coord_flip()
+)
+
+(
+  p9.ggplot(
+    data = summer_movies,
     mapping = p9.aes(x = 'runtime_minutes',y = 'average_rating')
   ) 
-  + p9.facet_wrap('genres')
   + p9.geom_point()
 )
 
-genre_ratings.group_by(
-  pl.col('genres')
-).agg()
+summer_movie_explode.group_by(
+  pl.col(['title_type','genres_list'])
+).agg(
+  pl.col('tconst').n_unique().alias('n')
+).sort('n')
