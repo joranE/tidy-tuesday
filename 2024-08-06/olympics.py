@@ -73,6 +73,10 @@ medal_dist_quantiles = medal_dist.group_by(
     pl.col('n_medals').quantile(0.5).alias('q50'),
     pl.col('n_medals').quantile(0.75).alias('q75'),
     pl.col('n_medals').mean().alias('avg')
+).join(
+    n_per_sport,
+    how = 'left',
+    on = ['season','sport']
 )
 
 medals_per_ath = medals_per_ath.join(
@@ -84,8 +88,8 @@ medals_per_ath = medals_per_ath.join(
     how = 'left',
     on = ['season','sport']
 ).with_columns(
-    (pl.col('n_medals') / pl.col('q50') / pl.col('n_ath')).alias('medals_per_med'),
-    (pl.col('n_medals') / pl.col('avg') / pl.col('n_ath')).alias('medals_per_avg')
+    (pl.col('n_medals') / (pl.col('q50') + pl.col('n_ath').sqrt())).alias('medals_per_med'),
+    (pl.col('n_medals') / (pl.col('avg') + pl.col('n_ath').sqrt())).alias('medals_per_avg')
 )
 
 swimming = medal_dist.filter(pl.col('sport') == 'Swimming')
@@ -122,5 +126,17 @@ tramp = medal_dist.filter(pl.col('sport') == 'Trampolining')
 )
 
 medals_per_ath.filter(
-    pl.col('max_year') >= 1980
-).top_k(k = 10,by = 'medals_per_avg')
+    (pl.col('max_year') >= 1972) & (pl.col('n_medals') > 2) & (~pl.col('sport').is_in(['Softball','Baseball']) )
+).top_k(k = 15,by = 'medals_per_med')
+
+(
+    p9.ggplot(
+        data = medal_dist_quantiles,
+        mapping = p9.aes(x = 'n_ath',y = 'q50')
+    ) 
+    + p9.geom_jitter()
+    + p9.geom_smooth(method = 'lm',se = False)  
+    + p9.scale_x_sqrt()
+)
+
+p9.geom_abline
